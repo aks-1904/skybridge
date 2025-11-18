@@ -24,5 +24,5 @@ export const UserProvider = ({ children }) => {
     <UserContext.Provider value={{ user, setUser: login, logout }}>
       {children}
     </UserContext.Provider>
-  );
+  ); 
 };

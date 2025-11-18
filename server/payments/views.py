@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from .models import Payment
 from .serializers import PaymentSerializer
 import uuid
+from shipments.models import Shipment
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
