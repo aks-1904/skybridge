@@ -60,4 +60,4 @@ coverage.xml
 *.py,cover
 *.pytest_cache/
 
-migrations
+migrations/
