@@ -1,11 +1,14 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { CheckCircle, User } from "lucide-react";
 import { UserContext } from "../context/UserContext";
 
 const ProfilePage = () => {
-  const { user } = useContext(UserContext);
+  const { user, setUser } = useContext(UserContext);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: "", text: "" });
 
   const [profile, setProfile] = useState({
     username: user?.username || "",
@@ -17,32 +20,60 @@ const ProfilePage = () => {
     aadhaar_verified: false,
   });
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        username: user.username || "",
+        email: user.email || "",
+        phone_number: user.phone_number || "",
+      });
+    }
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Updating profile:", profile);
-    alert("Profile updated successfully!");
+    setLoading(true);
+    setMessage({ type: "", text: "" });
+
+    const result = await API.auth.updateUser(user.id, profile);
+
+    if (result.success) {
+      setUser({ ...user, ...result.user }); // Update context
+      setMessage({ type: "success", text: "Profile updated successfully!" });
+    } else {
+      setMessage({ type: "error", text: "Failed to update profile." });
+    }
+    setLoading(false);
   };
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation
-        showBackButton
-        onBack={() => navigate("/" + user.role + "Dashboard")}
-        title="Profile"
-      />
+      <Navigation showBackButton onBack={() => navigate(-1)} title="Profile" />
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
             <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <User className="text-white" size={40} />
             </div>
-            <h2 className="text-2xl font-bold">{profile.username}</h2>
+            <h2 className="text-2xl font-bold">{user.username}</h2>
             <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mt-2">
-              {user?.role.charAt(0).toUpperCase() + user?.role.slice(1)}
+              {user.role}
             </span>
           </div>
+
+          {message.text && (
+            <div
+              className={`p-4 mb-6 rounded-lg ${
+                message.type === "success"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
@@ -122,25 +153,23 @@ const ProfilePage = () => {
               />
             </div>
 
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Aadhaar Verification</h3>
-                {profile.aadhaar_verified ? (
-                  <span className="flex items-center text-green-600">
-                    <UserCheck size={16} className="mr-1" />
-                    Verified
-                  </span>
-                ) : (
-                  <span className="text-orange-600">Not Verified</span>
-                )}
+            <div className="border rounded-lg p-4 bg-gray-50 flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold">Identity Verification</h3>
+                <p className="text-sm text-gray-500">
+                  {user.is_verified
+                    ? "Your account is verified"
+                    : "Verify your identity to start"}
+                </p>
               </div>
-              {!profile.aadhaar_verified && (
-                <button
-                  type="button"
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded transition-colors"
-                >
-                  Verify Aadhaar
-                </button>
+              {user.is_verified ? (
+                <span className="flex items-center text-green-600 font-medium">
+                  <CheckCircle size={18} className="mr-1" /> Verified
+                </span>
+              ) : (
+                <span className="flex items-center text-orange-600 font-medium">
+                  <AlertCircle size={18} className="mr-1" /> Pending
+                </span>
               )}
             </div>
 
@@ -148,7 +177,7 @@ const ProfilePage = () => {
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors"
             >
-              Update Profile
+              {loading ? "Updating..." : "Update Profile"}
             </button>
           </form>
         </div>

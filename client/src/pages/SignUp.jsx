@@ -12,18 +12,25 @@ const SignUp = () => {
     confirm_password: "",
     role: "sender",
   });
-
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     if (formData.password !== formData.confirm_password) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
+
     const result = await API.auth.register(formData);
     if (result.success) {
-      navigate("/otpVerification");
+      // Pass user_id to the OTP page so we verify the correct user
+      navigate("/otp", {
+        state: { userId: result.user_id, phone: formData.phone_number },
+      });
+    } else {
+      setError(JSON.stringify(result.error));
     }
   };
 
@@ -39,6 +46,11 @@ const SignUp = () => {
           <h2 className="text-2xl font-bold mb-6 text-center">
             Create Your Account
           </h2>
+          {error && (
+            <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"

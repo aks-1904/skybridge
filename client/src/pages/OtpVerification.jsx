@@ -1,19 +1,29 @@
 import { useState } from "react";
 import API from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { Phone } from "lucide-react";
 
 const OTPVerificationPage = () => {
   const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const { userId } = location.state || {}; // Get userId passed from SignUp
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await API.auth.verifyPhone(otp);
+    if (!userId) {
+      setError("User ID missing. Please sign up again.");
+      return;
+    }
+
+    const result = await API.auth.verifyPhone(otp, userId);
     if (result.success) {
-      navigate("login");
+      navigate("/login");
+    } else {
+      setError(result.error?.error || "Verification failed");
     }
   };
 
@@ -49,6 +59,12 @@ const OTPVerificationPage = () => {
             >
               Verify
             </button>
+
+            {error && (
+              <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">
+                {error}
+              </div>
+            )}
           </form>
         </div>
       </div>

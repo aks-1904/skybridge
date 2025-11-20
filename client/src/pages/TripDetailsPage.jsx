@@ -4,24 +4,29 @@ import Navigation from "../components/Navigation";
 import { Calendar, Eye, MapPin, Package, Plane, Weight } from "lucide-react";
 
 const TripDetailsPage = () => {
-  const [trip] = useState({
-    id: 1,
-    airline: "Air India",
-    flight_number: "AI101",
-    departure_city: "Delhi",
-    arrival_city: "Mumbai",
-    departure_date: "2025-10-01 14:30",
-    arrival_date: "2025-10-01 16:45",
-    total_weight_capacity: 15,
-    price_per_kg: 200,
-  });
+  const [trip, setTrip] = useState(null);
+  const [assignedShipments, setAssignedShipments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  const location = useLocation();
   const navigate = useNavigate();
+  const tripId = location.state?.id;
 
-  const [assignedShipments] = useState([
-    { id: 1, title: "Documents Package", weight: "2kg", price: 400 },
-    { id: 2, title: "Gift Items", weight: "3kg", price: 600 },
-  ]);
+  useEffect(() => {
+    if (tripId) {
+      Promise.all([
+        API.trips.getDetails(tripId),
+        API.trips.getShipments(tripId),
+      ]).then(([tripData, shipmentsData]) => {
+        setTrip(tripData);
+        setAssignedShipments(shipmentsData); // This returns TripShipment objects
+        setLoading(false);
+      });
+    }
+  }, [tripId]);
+
+  if (loading || !trip)
+    return <div className="p-8 text-center">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -20,9 +20,19 @@ const CreateTripForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await API.trips.create(formData);
+
+    // Format payload for API (ensure numbers are numbers, dates are strings)
+    const payload = {
+      ...formData,
+      total_weight_capacity: parseFloat(formData.total_weight_capacity),
+      price_per_kg: parseFloat(formData.price_per_kg),
+    };
+
+    const result = await API.trips.create(payload);
     if (result.success) {
-      navigate("carrierDashboard");
+      navigate("/carrierDashboard");
+    } else {
+      alert("Error creating trip: " + JSON.stringify(result.error));
     }
   };
 

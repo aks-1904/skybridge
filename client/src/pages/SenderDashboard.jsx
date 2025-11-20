@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from "react";
 import Navigation from "../components/Navigation";
 import { Edit, Eye, Plus } from "lucide-react";
-import API from "../services/api";
 import { useNavigate } from "react-router-dom";
+import { useShipments } from "../hooks/useSkybridge";
 
 const SenderDashboard = () => {
-  const [shipments, setShipments] = useState([]);
-
   const navigate = useNavigate();
-
-  useEffect(() => {
-    API.shipments.getAll().then(setShipments);
-  }, []);
+  const { shipments, loading, error } = useShipments();
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -21,6 +16,8 @@ const SenderDashboard = () => {
         return "text-blue-600 bg-blue-100";
       case "in_transit":
         return "text-green-600 bg-green-100";
+      case "delivered":
+        return "text-gray-600 bg-gray-200";
       default:
         return "text-gray-600 bg-gray-100";
     }
@@ -41,50 +38,64 @@ const SenderDashboard = () => {
           </button>
         </div>
 
+        {loading && (
+          <div className="text-center py-8">Loading shipments...</div>
+        )}
+        {error && (
+          <div className="text-center text-red-500 py-8">
+            Failed to load shipments
+          </div>
+        )}
+
         <div className="grid gap-6">
-          {shipments.map((shipment) => (
-            <div
-              key={shipment.id}
-              className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">
-                    {shipment.title}
-                  </h3>
-                  <p className="text-gray-600 mb-2">
-                    Tracking: {shipment.tracking_number}
-                  </p>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                      shipment.status
-                    )}`}
-                  >
-                    {shipment.status.charAt(0).toUpperCase() +
-                      shipment.status.slice(1)}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-green-600">
-                    ₹{shipment.offered_price}
-                  </p>
-                  <div className="flex space-x-2 mt-4">
-                    <button
-                      onClick={() =>
-                        navigate("shipmentDetails", { id: shipment.id })
-                      }
-                      className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded transition-colors"
+          {shipments &&
+            shipments?.map((shipment) => (
+              <div
+                key={shipment.id}
+                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold mb-2">
+                      {shipment.title}
+                    </h3>
+                    <p className="text-gray-600 mb-2">
+                      Tracking: {shipment.tracking_number}
+                    </p>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                        shipment.status
+                      )}`}
                     >
-                      <Eye size={16} />
-                    </button>
-                    <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded transition-colors">
-                      <Edit size={16} />
-                    </button>
+                      {shipment.status.charAt(0).toUpperCase() +
+                        shipment.status.slice(1)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-green-600">
+                      ₹{shipment.offered_price}
+                    </p>
+                    <div className="flex space-x-2 mt-4">
+                      <button
+                        onClick={() =>
+                          navigate("/shipmentDetails", {
+                            state: {
+                              id: shipment.id,
+                            },
+                          })
+                        }
+                        className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded transition-colors"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded transition-colors">
+                        <Edit size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
     </div>

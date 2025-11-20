@@ -1,117 +1,129 @@
+import axiosInstance from "./axiosInstance";
+
 const API = {
   auth: {
     register: async (data) => {
-      console.log("Registering:", data);
-      return { success: true, message: "OTP sent to phone" };
+      try {
+        const response = await axiosInstance.post("/auth/auth/register/", data);
+        console.log(response.data);
+        return { success: true, ...response.data };
+      } catch (error) {
+        console.error("Registration error:", error.response?.data);
+        return { success: false, error: error.response?.data };
+      }
     },
-    verifyPhone: async (otp) => {
-      console.log("Verifying OTP:", otp);
-      return { success: true, message: "Phone verified" };
+    verifyPhone: async (otp, userId) => {
+      try {
+        const response = await axiosInstance.post("/auth/auth/verify_phone/", {
+          otp,
+          user_id: userId,
+        });
+        return { success: true, ...response.data };
+      } catch (error) {
+        return { success: false, error: error.response?.data };
+      }
     },
     login: async (credentials) => {
-      console.log("Logging in:", credentials);
-      // Mock successful login
-      const mockUser = {
-        id: 1,
-        username: credentials.username,
-        role: "sender", // or 'carrier'
-        token: "mock-jwt-token",
-      };
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      return { success: true, user: mockUser };
+      try {
+        const response = await axiosInstance.post(
+          "/auth/auth/login/",
+          credentials
+        );
+        // The backend returns { token: '...', user: {...} }
+        const userData = {
+          ...response.data.user,
+          token: response.data.token,
+        };
+        localStorage.setItem("user", JSON.stringify(userData));
+        return { success: true, user: userData };
+      } catch (error) {
+        console.error("Login error:", error.response?.data);
+        return { success: false, error: error.response?.data };
+      }
+    },
+    updateUser: async (id, data) => {
+      try {
+        const response = await axiosInstance.patch(`/auth/users/${id}/`, data);
+        return { success: true, user: response.data };
+      } catch (error) {
+        return { success: false, error: error.response?.data };
+      }
     },
   },
   shipments: {
-    getAll: async () => [
-      {
-        id: 1,
-        title: "Documents to Mumbai",
-        tracking_number: "BS001",
-        status: "pending",
-        offered_price: 500,
-      },
-      {
-        id: 2,
-        title: "Gift Package",
-        tracking_number: "BS002",
-        status: "matched",
-        offered_price: 800,
-      },
-    ],
-    create: async (data) => {
-      console.log("Creating shipment:", data);
-      return { success: true, id: Math.random() };
+    getAll: async () => {
+      const response = await axiosInstance.get("/shipments/");
+      // FIX: Check for pagination 'results' or fallback to data
+      return response.data.results || response.data;
     },
-    getById: async (id) => ({
-      id,
-      title: "Documents to Mumbai",
-      description: "Important business documents",
-      weight: "2kg",
-      dimensions: "30x20x5cm",
-      value: 5000,
-      pickup_address: "Delhi",
-      delivery_address: "Mumbai",
-      pickup_date: "2025-10-01",
-      delivery_date: "2025-10-03",
-      offered_price: 500,
-      status: "pending",
-    }),
-    findMatches: async (id) => [
-      {
-        id: 1,
-        carrier_name: "John Doe",
-        price_estimate: 450,
-        departure: "Delhi",
-        arrival: "Mumbai",
-        date: "2025-10-02",
-      },
-      {
-        id: 2,
-        carrier_name: "Jane Smith",
-        price_estimate: 400,
-        departure: "Delhi",
-        arrival: "Mumbai",
-        date: "2025-10-01",
-      },
-    ],
+    create: async (data) => {
+      try {
+        const response = await axiosInstance.post("/shipments/", data);
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: error.response?.data };
+      }
+    },
+    getById: async (id) => {
+      const response = await axiosInstance.get(`/shipments/${id}/`);
+      return response.data;
+    },
+    findMatches: async (id) => {
+      // Based on ShipmentViewSet.find_matches action
+      const response = await axiosInstance.post(
+        `/shipments/${id}/find_matches/`
+      );
+      return response.data.matches;
+    },
+    assignCarrier: async (shipmentId, tripId) => {
+      try {
+        const response = await axiosInstance.post(
+          `/shipments/${shipmentId}/assign_carrier/`,
+          {
+            trip_id: tripId,
+          }
+        );
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: error.response?.data };
+      }
+    },
   },
   trips: {
-    getAll: async () => [
-      {
-        id: 1,
-        flight_number: "AI101",
-        departure_city: "Delhi",
-        arrival_city: "Mumbai",
-        departure_date: "2025-10-01",
-      },
-      {
-        id: 2,
-        flight_number: "SG205",
-        departure_city: "Mumbai",
-        arrival_city: "Bangalore",
-        departure_date: "2025-10-05",
-      },
-    ],
+    getAll: async () => {
+      const response = await axiosInstance.get("/trips/");
+      // FIX: Check for pagination 'results'
+      return response.data.results || response.data;
+    },
     create: async (data) => {
-      console.log("Creating trip:", data);
-      return { success: true, id: Math.random() };
+      try {
+        const response = await axiosInstance.post("/trips/", data);
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, error: error.response?.data };
+      }
+    },
+    getDetails: async (id) => {
+      const response = await axiosInstance.get(`/trips/${id}/`);
+      return response.data;
+    },
+    getShipments: async (id) => {
+      const response = await axiosInstance.get(`/trips/${id}/shipments/`);
+      return response.data;
     },
   },
   notifications: {
-    getAll: async () => [
-      {
-        id: 1,
-        title: "Shipment Matched",
-        message: "Your package has been matched with a carrier",
-        read: false,
-      },
-      {
-        id: 2,
-        title: "Payment Received",
-        message: "Payment has been processed successfully",
-        read: true,
-      },
-    ],
+    getAll: async () => {
+      const response = await axiosInstance.get("/notifications/");
+      // FIX: Check for pagination 'results'
+      return response.data.results || response.data;
+    },
+    markRead: async (id) => {
+      await axiosInstance.post(`/notifications/${id}/mark_read/`);
+    },
+    markAllRead: async () => {
+      await axiosInstance.post("/notifications/mark_all_read/");
+    },
   },
 };
 

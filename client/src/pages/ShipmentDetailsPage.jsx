@@ -1,27 +1,29 @@
-import React, { useEffect, useState } from "react";
 import API from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { Calendar, DollarSign, MapPin, Package, Search } from "lucide-react";
+import { useShipmentDetails } from "../hooks/useSkybridge";
 
 const ShipmentDetailsPage = () => {
-  const [shipment, setShipment] = useState(null);
-  const [matches, setMatches] = useState([]);
-  const [showMatches, setShowMatches] = useState(false);
-
+  const location = useLocation();
   const navigate = useNavigate();
+  const shipmentId = location.state?.id; // Get ID from navigation state
 
-  useEffect(() => {
-    API.shipments.getById(1).then(setShipment);
-  }, []);
+  const { shipment, matches, loading, findMatches } =
+    useShipmentDetails(shipmentId);
 
-  const findMatches = async () => {
-    const result = await API.shipments.findMatches(1);
-    setMatches(result);
-    setShowMatches(true);
+  const handleAssign = async (tripId) => {
+    const result = await API.shipments.assignCarrier(shipment.id, tripId);
+    if (result.success) {
+      alert("Carrier assigned successfully!");
+      navigate("/senderDashboard");
+    } else {
+      alert(result.error?.error || "Assignment failed");
+    }
   };
 
-  if (!shipment) return <div>Loading...</div>;
+  if (loading || !shipment)
+    return <div className="p-8 text-center">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -64,18 +66,20 @@ const ShipmentDetailsPage = () => {
               <div>
                 <h3 className="text-lg font-semibold mb-3">Description</h3>
                 <p className="text-gray-600 mb-6">{shipment.description}</p>
-                <button
-                  onClick={findMatches}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center space-x-2 transition-colors"
-                >
-                  <Search size={20} />
-                  <span>Find Matching Trips</span>
-                </button>
+                {shipment.status === "pending" && (
+                  <button
+                    onClick={findMatches}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center space-x-2 transition-colors"
+                  >
+                    <Search size={20} />
+                    <span>Find Matching Trips</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          {showMatches && (
+          {matches.length > 0 && (
             <div className="bg-white rounded-lg shadow-lg p-8">
               <h3 className="text-xl font-bold mb-6">Available Carriers</h3>
               <div className="space-y-4">
@@ -97,7 +101,10 @@ const ShipmentDetailsPage = () => {
                       <p className="text-lg font-bold text-green-600">
                         ₹{match.price_estimate}
                       </p>
-                      <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors">
+                      <button
+                        onClick={() => handleAssign(match.trip.id)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors"
+                      >
                         Assign Carrier
                       </button>
                     </div>
